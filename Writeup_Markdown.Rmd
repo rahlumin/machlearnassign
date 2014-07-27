@@ -1,0 +1,124 @@
+---
+title: 'Assignment: Practical Machine Learning'
+author: "rahlumin_AT_gmail"
+date: "07/27/2014"
+output: html_document
+---
+
+The problem presented in this assignment posed many challanges and and helped me understand the issues with MAchine Learning.
+
+__Type of Problem:__ The problem is clearly a Classification Problem as the class variable is a factor variable. 
+
+__Selection of algorithm:__ As this is a classification problem, Random Forest, Rpart , glm and naive bayesian were tried.  Random Foret and glm worked best. 
+
+__Data Splitting:__ Given the large number of observations (~20,000) the Training data was further split in Training and Validation/Test data in the ratio of 60:40 . While a k-folds validatin was dome on the training subdivision, the testing subdivision was only used once to assess out of sample errors.
+
+
+
+__Preprocessing Used:__ First off, there were many null values and many factor variables. IT was ensured that all blanks were converted to NAs at the time of reading the csv.
+
+```{r}
+dt<-read.csv("pml-training.csv", na.strings = c("NA",""))
+
+```
+
+All the columns with na's were later removed, and only numerical colums(other than the classification column) were retained.  
+
+There was a fair amount of correlation among some columns as is evident from the following code and plot. 
+
+
+
+You can also embed plots, for example:
+
+```{r, echo=FALSE}
+dt<-read.csv("pml-training.csv", na.strings = c("NA",""))
+prepareData<-function(dat)
+{ 
+  colsWithNulls<-unique(which(is.na(dat),arr.ind = T)[,2])
+  names(dat[colsWithNulls])
+  
+  #  let's drop them and see 
+  dat2<-dat[,-colsWithNulls]
+  dim(dat)
+  dim(dat2)
+  #let's retain  numeric only columns
+  nums <- sapply(dat2, is.numeric)
+  nums  
+  length(nums==T)
+  dat2_n<-dat2[nums]
+  
+  return(dat2_n)
+}
+dt2_n<-dt2_n<-prepareData(dt)
+plot(dt2_n[,22],dt2_n[,23])
+plot(dt2_n[,25],dt2_n[,28])
+```
+
+To pare down the number of columns, PCA was used as an argument to train function. 
+
+
+
+```{r}
+applyMethod<-function(meth)
+{
+  print("======training, method is====")
+  print(meth)
+  #we shall restrict it to 15 folds and 5 repeats
+  tc<-trainControl(method ="cv",number = 15,repeats = 5 )
+  modFit<-train(classe ~ ., trControl = tc,
+                method=meth, preProcess="pca", data = training   )
+  #summary(modFit$finalModel)
+  pred<-predict(modFit, testing)
+  conf<-confusionMatrix(pred,testing$classe )
+  print( conf$overall )
+  print("xxxxxxxxxxend train xxxxxxxxxxx")
+  return(modFit)
+}
+```
+
+
+
+Running this with Random Forest Model provides following Result:
+ 
+```
+      Accuracy          Kappa  AccuracyLower  AccuracyUpper   AccuracyNull 
+     0.9795988      0.9741730      0.9738167      0.9843965      0.2852771 
+AccuracyPValue  McnemarPValue 
+     0.0000000            NaN 
+ 
+```
+ 
+
+Running with lda provides a comparable accuracy 
+
+Testing against the validation subset set aside provides follwoing result
+
+ 
+
+```
+ 
+
+          Reference
+Prediction    A    B    C    D    E
+         A 2216   22    3    0    0
+         B    5 1482   28    1    0
+         C    0   23 1324   33    0
+         D    0    0    5 1261    4
+         E    0    0    2    6 1434
+
+```
+```
+Overall Statistics
+                                    
+               Accuracy : 0.9832          
+                 95% CI : (0.9801, 0.9859)
+    No Information Rate : 0.283           
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.9787              
+```
+Give an accuracy of 0.98 with validation set I expected an accuracy aroun 75-80 % on new sample. 
+Howwever, when tested agains the test csv provided (submitted values) the accuracy was found to be 65* for the 20 observations provided.
+
+
+                 =======X=====
